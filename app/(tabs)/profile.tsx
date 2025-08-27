@@ -4,8 +4,8 @@ import { useRouter } from 'expo-router';
 
 import { useAuth } from '@/hooks/useAuth';
 
-export default function HomeScreen() {
-  const { token } = useAuth();
+export default function ProfileScreen() {
+  const { token, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -14,9 +14,14 @@ export default function HomeScreen() {
     }
   }, [token, router]);
 
+  const handleLogout = async () => {
+    await logout();
+    router.replace('/login');
+  };
+
   return (
     <View style={styles.container}>
-      <Button title="Scan Ticket" onPress={() => router.push('/scan')} />
+      <Button title="Logout" onPress={handleLogout} />
     </View>
   );
 }
