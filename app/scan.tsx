@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, StyleSheet } from 'react-native';
-import { BarCodeScanner } from 'expo-barcode-scanner';
+import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { useRouter } from 'expo-router';
 
 import { useAuth } from '@/hooks/useAuth';
 
 export default function ScanScreen() {
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const router = useRouter();
   const { token } = useAuth();
@@ -18,25 +18,25 @@ export default function ScanScreen() {
   }, [token, router]);
 
   useEffect(() => {
-    (async () => {
-      const { status } = await BarCodeScanner.requestPermissionsAsync();
-      setHasPermission(status === 'granted');
-    })();
-  }, []);
+    requestPermission();
+  }, [requestPermission]);
 
-  const handleBarCodeScanned = ({ data }: { type: string; data: string }) => {
+  const handleBarCodeScanned = ({ data }: BarcodeScanningResult) => {
     setScanned(true);
     try {
       const payload = JSON.parse(data);
       const { subscriptionId, coffeeCode } = payload;
-      router.replace({ pathname: '/checkout', params: { subscriptionId: String(subscriptionId), coffeeCode } });
+      router.replace({
+        pathname: '/checkout',
+        params: { subscriptionId: String(subscriptionId), coffeeCode },
+      });
     } catch {
       alert('Invalid code');
       setScanned(false);
     }
   };
 
-  if (hasPermission === null) {
+  if (!permission) {
     return (
       <View style={styles.messageContainer}>
         <Text>Requesting camera permission...</Text>
@@ -44,7 +44,7 @@ export default function ScanScreen() {
     );
   }
 
-  if (hasPermission === false) {
+  if (!permission.granted) {
     return (
       <View style={styles.messageContainer}>
         <Text>No access to camera</Text>
@@ -54,8 +54,9 @@ export default function ScanScreen() {
 
   return (
     <View style={{ flex: 1 }}>
-      <BarCodeScanner
-        onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+      <CameraView
+        onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+        barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
         style={{ flex: 1 }}
       />
       {scanned && <Button title="Tap to Scan Again" onPress={() => setScanned(false)} />}
